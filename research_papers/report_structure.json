@@ -1,0 +1,230 @@
+{
+  "report_metadata": {
+    "report_id": "RPT-abc123-2026-03-20",
+    "correlation_id": "abc-123-def-456",
+    "title": "Small Language Models vs Large Language Models in Agentic AI Systems",
+    "generated_at": "2026-03-20T10:04:32Z",
+    "prompt": "Compare the suitability of small vs large language models for agentic AI workflows",
+    "depth": "standard",
+    "pipeline_version": "1.0",
+    "recommendation": "publish",
+    "overall_confidence": 0.83
+  },
+
+  "executive_summary": {
+    "text": "Across both web and internal sources, there is strong agreement that small language models (SLMs) offer meaningful cost, latency, and deployment advantages for agentic workloads. The primary area of conflict centres on whether SLM performance is sufficient to fully replace LLMs on complex reasoning tasks, with empirical papers and position papers diverging on this point.",
+    "word_count": 58,
+    "key_takeaways": [
+      "SLMs are 10–30x cheaper to serve than LLMs of comparable generation",
+      "Transformer-based architectures underpin both SLMs and LLMs",
+      "Agentic systems benefit from heterogeneous model routing",
+      "Major unresolved conflict: generalisation capability of SLMs under scaling laws"
+    ]
+  },
+
+  "findings": [
+    {
+      "finding_id": "F-001",
+      "sub_query": "What are the cost and efficiency advantages of SLMs over LLMs in agentic systems?",
+      "summary": "Multiple sources confirm that serving a 7B SLM is significantly cheaper in latency, energy, and compute than a 70–175B LLM. Fine-tuning SLMs requires only a few GPU-hours versus weeks for LLMs.",
+      "detail": "The SLM paper cites inference efficiency gains of 10–30x and highlights that parameter-efficient fine-tuning (LoRA, DoRA) allows overnight specialisation. The Attention paper corroborates parallelisation efficiency gains as a core motivation for the Transformer architecture itself.",
+      "confidence": 0.91,
+      "source_agreement": "full",
+      "citations": ["CIT-001", "CIT-002", "CIT-005"],
+      "supporting_facts": [
+        {
+          "fact_id": "FACT-007",
+          "claim": "Serving a 7B SLM is 10–30x cheaper in latency, energy consumption, and FLOPs than a 70–175B LLM",
+          "source_ref": "CIT-001",
+          "confidence_raw": 0.95
+        },
+        {
+          "fact_id": "FACT-012",
+          "claim": "Parameter-efficient fine-tuning for SLMs requires only a few GPU-hours",
+          "source_ref": "CIT-001",
+          "confidence_raw": 0.88
+        }
+      ]
+    },
+    {
+      "finding_id": "F-002",
+      "sub_query": "How does the Transformer architecture enable modern language model capabilities?",
+      "summary": "The Transformer replaces recurrence entirely with self-attention, enabling full parallelisation during training and constant-time dependency resolution across sequence positions.",
+      "detail": "The Attention Is All You Need paper establishes the encoder-decoder stack with multi-head scaled dot-product attention as the architectural foundation. The Spatial Transformer paper independently demonstrates that attention-based spatial transformation is learnable end-to-end without reinforcement learning, supporting the broader claim that attention mechanisms are a general-purpose learning primitive.",
+      "confidence": 0.97,
+      "source_agreement": "full",
+      "citations": ["CIT-002", "CIT-003"],
+      "supporting_facts": [
+        {
+          "fact_id": "FACT-021",
+          "claim": "The Transformer achieves 28.4 BLEU on WMT 2014 English-to-German, surpassing all prior models including ensembles",
+          "source_ref": "CIT-002",
+          "confidence_raw": 0.99
+        }
+      ]
+    }
+  ],
+
+  "agreements": [
+    {
+      "agreement_id": "AGR-001",
+      "topic": "Attention mechanisms as foundational primitive",
+      "statement": "All three internal documents converge on the view that attention mechanisms are a central and powerful building block for neural architectures, whether for sequence modelling, spatial transformation, or agentic task routing.",
+      "supporting_citations": ["CIT-001", "CIT-002", "CIT-003"],
+      "strength": "strong"
+    },
+    {
+      "agreement_id": "AGR-002",
+      "topic": "Parallelisation advantage of non-recurrent models",
+      "statement": "Both the Attention paper and the SLM paper agree that eliminating sequential computation is a key driver of both training efficiency and deployment cost reduction.",
+      "supporting_citations": ["CIT-001", "CIT-002"],
+      "strength": "strong"
+    }
+  ],
+
+  "conflicts": [
+    {
+      "conflict_id": "CON-001",
+      "topic": "SLM generalisation under scaling laws",
+      "claim_a": {
+        "text": "Scaling laws demonstrate that larger models always outperform smaller models on general language tasks, including narrow specialised ones",
+        "citation_ref": "CIT-004",
+        "source_label": "Scaling law literature (cited in SLM paper)"
+      },
+      "claim_b": {
+        "text": "SLMs with appropriate architecture choices and fine-tuning can match or exceed LLM performance on the narrow tasks that dominate agentic workloads",
+        "citation_ref": "CIT-001",
+        "source_label": "NVIDIA SLM Position Paper"
+      },
+      "severity": "major",
+      "resolution_status": "unresolved",
+      "analyst_note": "This conflict is partly definitional — the scaling law studies assume constant architecture, while the SLM paper argues for architecture-specific training. The conflict is real but narrower than it first appears."
+    },
+    {
+      "conflict_id": "CON-002",
+      "topic": "Attention head count and quality",
+      "claim_a": {
+        "text": "Single-head attention is 0.9 BLEU worse than optimal multi-head configuration",
+        "citation_ref": "CIT-002",
+        "source_label": "Attention Is All You Need"
+      },
+      "claim_b": {
+        "text": "Too many attention heads also degrades quality, suggesting an optimal mid-range",
+        "citation_ref": "CIT-002",
+        "source_label": "Attention Is All You Need (Table 3 row A)"
+      },
+      "severity": "minor",
+      "resolution_status": "resolved_in_source",
+      "analyst_note": "Both claims come from the same source and are complementary rather than truly conflicting — the paper itself resolves this with the h=8 recommendation."
+    }
+  ],
+
+  "open_questions": [
+    {
+      "question_id": "OQ-001",
+      "question": "At what task complexity threshold does an SLM's performance degrade enough to require LLM fallback in a heterogeneous agentic system?",
+      "origin": "conflict",
+      "linked_conflict_id": "CON-001",
+      "priority": "high"
+    },
+    {
+      "question_id": "OQ-002",
+      "question": "How do spatial transformer mechanisms interact with SLM architectures for multi-modal agentic tasks involving visual inputs?",
+      "origin": "coverage_gap",
+      "linked_conflict_id": null,
+      "priority": "medium"
+    },
+    {
+      "question_id": "OQ-003",
+      "question": "What is the optimal chunk size and positional encoding strategy when indexing long-form research papers in Azure AI Search for RAG retrieval?",
+      "origin": "coverage_gap",
+      "linked_conflict_id": null,
+      "priority": "low"
+    }
+  ],
+
+  "citations": [
+    {
+      "ref_id": "CIT-001",
+      "title": "Small Language Models are the Future of Agentic AI",
+      "authors": ["Belcak, Peter", "Heinrich, Greg", "Diao, Shizhe"],
+      "venue": "arXiv preprint",
+      "publication_year": 2025,
+      "arxiv_id": "2506.02153",
+      "source_type": "internal",
+      "url": "",
+      "file_name": "Small_Language_Models.pdf",
+      "section_referenced": "Section 3.2 — SLMs are more economical in agentic systems",
+      "page_referenced": 4,
+      "accessed_at": "2026-03-20T10:01:15Z",
+      "is_position_paper": true,
+      "relevance_score": 0.94
+    },
+    {
+      "ref_id": "CIT-002",
+      "title": "Attention Is All You Need",
+      "authors": ["Vaswani, Ashish", "Shazeer, Noam", "Parmar, Niki"],
+      "venue": "NeurIPS 2017",
+      "publication_year": 2017,
+      "arxiv_id": "1706.03762",
+      "source_type": "internal",
+      "url": "",
+      "file_name": "Attention_is_All_You_Need.pdf",
+      "section_referenced": "Section 3.2 — Multi-Head Attention",
+      "page_referenced": 4,
+      "accessed_at": "2026-03-20T10:01:22Z",
+      "is_position_paper": false,
+      "relevance_score": 0.97
+    },
+    {
+      "ref_id": "CIT-003",
+      "title": "Spatial Transformer Networks",
+      "authors": ["Jaderberg, Max", "Simonyan, Karen", "Zisserman, Andrew", "Kavukcuoglu, Koray"],
+      "venue": "NeurIPS 2015",
+      "publication_year": 2015,
+      "arxiv_id": "1506.02025",
+      "source_type": "internal",
+      "url": "",
+      "file_name": "Spatial_Transformer_Networks.pdf",
+      "section_referenced": "Section 3 — Spatial Transformers",
+      "page_referenced": 3,
+      "accessed_at": "2026-03-20T10:01:30Z",
+      "is_position_paper": false,
+      "relevance_score": 0.81
+    },
+    {
+      "ref_id": "CIT-004",
+      "title": "Training Compute-Optimal Large Language Models",
+      "authors": ["Hoffmann, Jordan", "Borgeaud, Sebastian"],
+      "venue": "arXiv preprint",
+      "publication_year": 2022,
+      "arxiv_id": "2203.15556",
+      "source_type": "web",
+      "url": "https://arxiv.org/abs/2203.15556",
+      "file_name": null,
+      "section_referenced": null,
+      "page_referenced": null,
+      "accessed_at": "2026-03-20T10:02:05Z",
+      "is_position_paper": false,
+      "relevance_score": 0.73
+    },
+    {
+      "ref_id": "CIT-005",
+      "title": "Small Language Models (SLMs) Can Still Pack a Punch: A Survey",
+      "authors": ["Subramanian, Shreyas", "Elango, Vikram"],
+      "venue": "arXiv preprint",
+      "publication_year": 2025,
+      "arxiv_id": "2501.05465",
+      "source_type": "web",
+      "url": "https://arxiv.org/abs/2501.05465",
+      "file_name": null,
+      "section_referenced": null,
+      "page_referenced": null,
+      "accessed_at": "2026-03-20T10:02:18Z",
+      "is_position_paper": false,
+      "relevance_score": 0.88
+    }
+  ],
+
+  "methodology_note": "Research was conducted using hybrid search (semantic + keyword) over an internal Azure AI Search index of research papers and live web retrieval via Tavily API. Facts were extracted per source using structured LLM calls and compared across sources for agreement and conflict. Confidence scoring combines source diversity, sub-query coverage ratio, and conflict ratio. Position papers are flagged and weighted accordingly in conflict analysis."
+}
