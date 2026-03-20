@@ -42,12 +42,12 @@ async def gatherer_executor(
 
                 plan = state.task_plan
 
-                async def fetch_query(sub_query: str, source_types: list) -> list:
-                    tasks = []
-                    if "web" in source_types or "both" in source_types:
-                        tasks.append(tavily_search(sub_query))
-                    if "internal" in source_types or "both" in source_types:
-                        tasks.append(internal_search(sub_query))
+                async def fetch_query(sub_query: str) -> list:
+                    """Always search both web and internal sources."""
+                    tasks = [
+                        tavily_search(sub_query),
+                        internal_search(sub_query),
+                    ]
                     results = await asyncio.gather(*tasks, return_exceptions=True)
                     merged = []
                     for r in results:
@@ -62,7 +62,7 @@ async def gatherer_executor(
 
                 # Parallel fetch across all sub-queries
                 fetch_tasks = [
-                    fetch_query(sq, plan["source_types"])
+                    fetch_query(sq)
                     for sq in plan["sub_queries"]
                 ]
                 query_results = await asyncio.gather(*fetch_tasks)

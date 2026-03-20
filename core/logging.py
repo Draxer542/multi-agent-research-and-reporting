@@ -118,6 +118,15 @@ def _configure_root() -> None:
         handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
 
     root.addHandler(handler)
+
+    # Silence noisy Azure SDK loggers (QuickPulse pings, exporter HTTP calls)
+    for noisy in (
+        "azure.core.pipeline.policies.http_logging_policy",
+        "azure.monitor.opentelemetry.exporter._quickpulse",
+        "azure.monitor.opentelemetry.exporter",
+    ):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
     _configured = True
 
 

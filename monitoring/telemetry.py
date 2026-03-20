@@ -1,9 +1,14 @@
 """
 OpenTelemetry tracing and custom metrics for the Research Agent platform.
 
-Initialises a ``TracerProvider`` and ``MeterProvider`` and configures the
-Azure Monitor exporter when ``APPLICATIONINSIGHTS_CONNECTION_STRING`` is set.
-In local development (env var absent), tracing and metrics are silent no-ops.
+Uses the official ``azure-monitor-opentelemetry`` distro which provides
+``configure_azure_monitor()`` — this automatically sets up:
+
+- **Request tracking** (FastAPI HTTP requests → Application Insights "requests" table)
+- **Dependency tracking** (outgoing httpx/requests calls → "dependencies" table)
+- **Exception tracking** (unhandled exceptions → "exceptions" table)
+- **Log forwarding** (Python logging → "traces" table)
+- **Custom metrics** (pipeline counters/histograms → "customMetrics" table)
 
 Usage::
 
@@ -22,16 +27,12 @@ Usage::
 
 from __future__ import annotations
 
-import os
+import logging
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from opentelemetry import trace, metrics as otel_metrics
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
 from core.logging import get_logger
 
@@ -131,11 +132,15 @@ def timed_stage(stage_name: str, correlation_id: str = ""):
 
 def setup_telemetry() -> None:
     """
-    Initialise OpenTelemetry with the Azure Monitor exporter.
+    Initialise OpenTelemetry with the Azure Monitor distro.
+
+    Uses ``configure_azure_monitor()`` which automatically instruments:
+    - FastAPI (incoming HTTP requests)
+    - httpx / requests (outgoing HTTP calls)
+    - Logging (Python log records)
+    - Exceptions (unhandled errors)
 
     Safe to call multiple times — only the first invocation takes effect.
-    If ``APPLICATIONINSIGHTS_CONNECTION_STRING`` is not set, this function
-    logs a warning and returns (tracing becomes a no-op).
     """
     global _initialised
     if _initialised:
@@ -149,56 +154,55 @@ def setup_telemetry() -> None:
             "APPLICATIONINSIGHTS_CONNECTION_STRING not set — "
             "tracing and metrics disabled (no-op)"
         )
-        # Still create no-op instruments so call sites don't need guards
         meter = otel_metrics.get_meter("research-agent")
         metrics._init_instruments(meter)
         _initialised = True
         return
 
     try:
-        from azure.monitor.opentelemetry.exporter import (
-            AzureMonitorTraceExporter,
-            AzureMonitorMetricExporter,
+        from azure.monitor.opentelemetry import configure_azure_monitor
+
+        configure_azure_monitor(
+            connection_string=conn_str,
+            enable_live_metrics=True,
+            logger_name="",  # capture all Python loggers
         )
 
-        # Traces
-        trace_exporter = AzureMonitorTraceExporter(connection_string=conn_str)
-        trace_provider = TracerProvider()
-        trace_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
-        trace.set_tracer_provider(trace_provider)
-
-        # Metrics
-        metric_exporter = AzureMonitorMetricExporter(connection_string=conn_str)
-        metric_reader = PeriodicExportingMetricReader(
-            metric_exporter, export_interval_millis=60_000
-        )
-        meter_provider = MeterProvider(metric_readers=[metric_reader])
-        otel_metrics.set_meter_provider(meter_provider)
-
-        # Initialise instruments
+        # Initialise custom pipeline instruments
         meter = otel_metrics.get_meter("research-agent")
         metrics._init_instruments(meter)
 
         logger.info(
-            "OpenTelemetry initialised with Azure Monitor "
-            "(traces + metrics)"
+            "Azure Monitor OpenTelemetry distro initialised "
+            "(requests + dependencies + logs + metrics)"
         )
+
     except ImportError:
         logger.warning(
-            "azure-monitor-opentelemetry-exporter not installed — "
-            "tracing disabled"
+            "azure-monitor-opentelemetry not installed — "
+            "falling back to no-op telemetry"
         )
         meter = otel_metrics.get_meter("research-agent")
         metrics._init_instruments(meter)
+
     except Exception as exc:
         logger.error(
-            "Failed to initialise OpenTelemetry",
+            "Failed to initialise Azure Monitor OpenTelemetry",
             extra={"error": str(exc)},
         )
         meter = otel_metrics.get_meter("research-agent")
         metrics._init_instruments(meter)
 
     _initialised = True
+
+
+def instrument_app(app) -> None:
+    """
+    Kept for backward compatibility — ``configure_azure_monitor()`` already
+    instruments FastAPI automatically via its bundled instrumentors.
+    This is now a no-op but safe to call.
+    """
+    logger.debug("instrument_app called (auto-instrumentation already active via distro)")
 
 
 # Module-level tracer — importable from anywhere.

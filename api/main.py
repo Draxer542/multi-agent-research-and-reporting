@@ -10,20 +10,25 @@ Provides three routes:
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.models import ResearchRequest, ResearchAccepted
 from api.queue_client import enqueue_job
 from tools.injection_filter import sanitize_prompt
 from tools.scope_guard import check_scope
 from core.logging import get_logger
-from monitoring.telemetry import setup_telemetry
+from monitoring.telemetry import setup_telemetry, instrument_app
 
 logger = get_logger(__name__, component="api")
+
+# Background worker task handle (prevents GC and allows graceful shutdown)
+_worker_task: asyncio.Task | None = None
 
 # ── Application ──────────────────────────────────────────────────────
 app = FastAPI(
@@ -32,12 +37,37 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    return FileResponse("static/index.html")
+
 
 @app.on_event("startup")
 async def _startup() -> None:
-    """Initialise telemetry once on process start."""
+    """Initialise telemetry, instrument FastAPI, and start the queue worker."""
+    global _worker_task
     setup_telemetry()
-    logger.info("Research Agent API started")
+    instrument_app(app)
+
+    # Auto-start the queue worker as a background task
+    from worker.queue_worker import run_worker
+    _worker_task = asyncio.create_task(run_worker())
+    logger.info("Research Agent API started (worker auto-started)")
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    """Gracefully cancel the background worker on server shutdown."""
+    global _worker_task
+    if _worker_task and not _worker_task.done():
+        _worker_task.cancel()
+        try:
+            await _worker_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Background worker stopped")
 
 
 # ── Routes ───────────────────────────────────────────────────────────
@@ -83,6 +113,19 @@ async def create_research_job(request: ResearchRequest) -> ResearchAccepted:
         "callback_url": request.callback_url,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
     }
+
+    # ── Seed the SQL row so polling never 404s ───────────────────
+    from persistence.sql_client import upsert_job
+    await upsert_job({
+        "correlation_id": correlation_id,
+        "prompt": safe_prompt,
+        "depth": request.depth,
+        "status": "queued",
+        "stage": "planner",
+        "submitted_at": job_message["submitted_at"],
+        "callback_url": request.callback_url,
+        "original_message": job_message,
+    })
 
     # ── Publish ──────────────────────────────────────────────────
     await enqueue_job(job_message)

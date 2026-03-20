@@ -254,18 +254,28 @@ async def insert_conflicts(
                 )
                 if not conflicts:
                     return
-                rows = [
-                    (
+                rows = []
+                for c in conflicts:
+                    # Handle both nested (new) and flat (old) schemas
+                    if isinstance(c.get("claim_a"), dict):
+                        claim_a = c["claim_a"]["text"]
+                        source_a = c["claim_a"].get("source_label", "")
+                        claim_b = c["claim_b"]["text"]
+                        source_b = c["claim_b"].get("source_label", "")
+                    else:
+                        claim_a = c.get("claim_a", "")
+                        source_a = c.get("source_a", "")
+                        claim_b = c.get("claim_b", "")
+                        source_b = c.get("source_b", "")
+                    rows.append((
                         correlation_id,
                         c["topic"],
-                        c["claim_a"],
-                        c["source_a"],
-                        c["claim_b"],
-                        c["source_b"],
+                        claim_a,
+                        source_a,
+                        claim_b,
+                        source_b,
                         c.get("severity", "minor"),
-                    )
-                    for c in conflicts
-                ]
+                    ))
                 await cur.executemany(
                     """
                     INSERT INTO dbo.ConflictPoints
@@ -365,7 +375,8 @@ async def persist_final_output(state: dict) -> None:
                 )
                 await insert_conflicts(
                     state["correlation_id"],
-                    state["comparison_result"].get("conflicted_points", []),
+                    state["comparison_result"].get("conflicts",
+                        state["comparison_result"].get("conflicted_points", [])),
                 )
                 await insert_citations(
                     state["correlation_id"],

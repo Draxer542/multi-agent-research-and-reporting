@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Research & Reporting</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Landing Page -->
+    <div id="landing-page" class="view active">
+        <header class="navbar">
+            <div class="logo">Cognitive Architect</div>
+            <nav>
+                <a href="#how-it-works">How it Works</a>
+                <button class="btn btn-secondary" onclick="enterDashboard()">Sign In</button>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h1>Unlock Deep Insights with <br><span class="highlight">AI Agents</span></h1>
+                <p>A multi-agent synthesis platform featuring conflict analysis, source verification, and confidence scoring.</p>
+                <button class="btn btn-primary btn-large" onclick="enterDashboard()">Start Researching</button>
+            </section>
+
+            <section id="how-it-works" class="steps-section">
+                <h2>How it works</h2>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-num">01</div>
+                        <h3>Input prompt</h3>
+                        <p>Describe your research topic or complex question.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">02</div>
+                        <h3>Agents Research</h3>
+                        <p>Multi-agent team fetches, extracts, and analyzes data with conflict resolution.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">03</div>
+                        <h3>Get report</h3>
+                        <p>Receive a structured report backed by cited sources and confidence scores.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <div class="footer-content">
+                <p>&copy; 2026 Multi-Agent Research Platform. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="view">
+        <aside class="sidebar">
+            <div class="logo">Cognitive Architect</div>
+            <nav class="sidebar-nav">
+                <a href="#" class="active">New Research</a>
+                <a href="#" onclick="alert('History not implemented')">History</a>
+                <a href="#" onclick="alert('Settings not implemented')">Settings</a>
+            </nav>
+        </aside>
+        
+        <main class="dashboard-main">
+            <div class="input-container">
+                <input type="text" id="prompt-input" placeholder="Type your research prompt... (e.g. 'Analyze the impact of quantum computing')" autocomplete="off" />
+                <button class="btn btn-primary" onclick="submitResearch()">Analyze</button>
+            </div>
+
+            <div class="split-view">
+                <!-- Left: Intelligence Feed -->
+                <section class="intelligence-feed" id="feed-container">
+                    <h3>Intelligence Feed</h3>
+                    <div class="thread-line"></div>
+                    <div class="feed-content" id="feed-content">
+                        <!-- Feed items inserted here dynamically -->
+                        <div class="feed-placeholder">Awaiting input...</div>
+                    </div>
+                </section>
+
+                <!-- Right: Structured Report -->
+                <section class="structured-report">
+                    <h3>Live Report</h3>
+                    <div class="report-content" id="report-content">
+                        <!-- Report content inserted here -->
+                        <div class="report-placeholder">Synthesis will appear here.</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
