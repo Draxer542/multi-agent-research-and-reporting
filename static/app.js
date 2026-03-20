@@ -172,7 +172,11 @@ function addFeedItem(agent, action, isGlass = false) {
 function buildCitationMap(citations) {
     const map = {};
     if (!citations) return map;
-    citations.forEach(c => { map[c.ref_id] = c; });
+    citations.forEach(c => {
+        map[c.ref_id] = c;
+        // Also index by URL so we can resolve URL-based citation_refs
+        if (c.url) map[c.url] = c;
+    });
     return map;
 }
 
@@ -182,17 +186,22 @@ function buildCitationMap(citations) {
  */
 function citationPill(refId, citMap) {
     const c = citMap[refId];
-    if (!c) return `<span class="cite-pill">${refId}</span>`;
+    if (!c) {
+        // refId not found — it may be a URL that isn't in the map either
+        return `<span class="cite-pill">${refId.length > 30 ? refId.substring(0, 28) + '…' : refId}</span>`;
+    }
 
+    // Always display using the canonical ref_id from the citation object
+    const displayId = c.ref_id || refId;
     const icon = c.source_type === 'internal' ? '📄' : '🌐';
     const authors = c.authors && c.authors.length ? c.authors.join(', ') : '';
     const year = c.publication_year ? ` (${c.publication_year})` : '';
     const venue = c.venue ? `<div class="cite-venue">${c.venue}</div>` : '';
     const url = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.url}</a>` : '';
 
-    return `<span class="cite-pill" tabindex="0">${icon} ${refId}
+    return `<span class="cite-pill" tabindex="0">${icon} ${displayId}
         <span class="cite-expanded">
-            <strong>${c.title || refId}</strong>
+            <strong>${c.title || displayId}</strong>
             ${authors ? `<div class="cite-authors">${authors}${year}</div>` : ''}
             ${venue}
             ${url ? `<div class="cite-url">${url}</div>` : ''}

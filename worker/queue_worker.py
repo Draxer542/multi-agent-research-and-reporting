@@ -32,7 +32,7 @@ from core.logging import get_logger
 
 logger = get_logger(__name__, component="worker")
 
-VISIBILITY_TIMEOUT = 300    # 5 minutes per attempt
+VISIBILITY_TIMEOUT = 600    # 10 minutes per attempt (pipeline can be long)
 
 
 async def process_message(message: dict) -> None:
@@ -42,6 +42,16 @@ async def process_message(message: dict) -> None:
     job_start = time.monotonic()
 
     try:
+        # ── Idempotency guard ────────────────────────────────────
+        from persistence.sql_client import get_job
+        existing = await get_job(correlation_id)
+        if existing and existing.get("status") in ("complete", "failed", "dead_lettered"):
+            ctx.info(
+                "Job already finished — skipping duplicate message",
+                extra={"status": existing["status"]},
+            )
+            return
+
         workflow = build_workflow()
 
         # Build initial state as a dataclass

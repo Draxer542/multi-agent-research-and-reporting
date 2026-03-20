@@ -58,13 +58,26 @@ async def internal_search(
             credential=AzureKeyCredential(settings.azure_search_key),
         )
         async with client:
-            results = await client.search(
-                search_text=query,
-                top=top,
-                query_type="semantic",
-                semantic_configuration_name="default",
-                select=["id", "title", "content", "source_url", "last_updated"],
-            )
+            # Try semantic search first; fall back to simple if config is missing
+            try:
+                results = await client.search(
+                    search_text=query,
+                    top=top,
+                    query_type="semantic",
+                    semantic_configuration_name="default",
+                    select=["id", "title", "content", "source_url", "last_updated"],
+                )
+            except Exception as sem_exc:
+                logger.warning(
+                    "Semantic search failed, falling back to keyword search",
+                    extra={"error": str(sem_exc)},
+                )
+                results = await client.search(
+                    search_text=query,
+                    top=top,
+                    select=["id", "title", "content", "source_url", "last_updated"],
+                )
+
             docs = []
             async for r in results:
                 docs.append(
@@ -77,6 +90,10 @@ async def internal_search(
                         "last_updated": r.get("last_updated", ""),
                     }
                 )
+
+        if not docs:
+            logger.info("Internal search returned 0 results", extra={"query": query})
+
         return docs
 
     except Exception as exc:

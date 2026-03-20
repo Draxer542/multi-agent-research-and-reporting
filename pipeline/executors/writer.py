@@ -196,6 +196,13 @@ The report must follow this EXACT structure. Return ONLY valid JSON. No markdown
   ],
   "methodology_note": "Brief description of how sources were gathered and compared"
 }
+
+CRITICAL RULES:
+- Every citation_ref value throughout the report (in supporting_facts, conflicts, agreements, etc.)
+  MUST reference a ref_id from the citations array (e.g. "ref-1", "ref-2").
+  NEVER use raw URLs as citation_ref values.
+- Every source used in the report MUST appear in the citations array with its ref_id.
+- Include BOTH web and internal sources in the citations. Tag internal documents with "source_type": "internal".
 """
 
 
